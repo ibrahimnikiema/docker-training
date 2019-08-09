@@ -1,0 +1,95 @@
+description = 'Docker Training Groovy Sample Application'
+group = 'com.mutualofomaha.vcs'
+
+
+repositories {
+    maven {
+        url("$artifactoryUrl/libs-release")
+    }
+}
+
+apply plugin: 'com.mutualofomaha.artifactory-conventions'
+apply plugin: 'com.mutualofomaha.jenkins-conventions'
+apply plugin: 'com.mutualofomaha.common-conventions'
+apply plugin: 'com.mutualofomaha.groovy-conventions'
+apply plugin: 'com.mutualofomaha.infrastructure-conventions'
+apply plugin: 'com.mutualofomaha.sca-conventions'
+
+apply plugin: 'groovy'
+apply plugin: 'java'
+apply plugin: 'com.github.ben-manes.versions'
+apply plugin: 'application'
+apply plugin: 'codenarc'
+
+
+artifactoryPublish { skip = true }
+
+mainClassName = "GroovySampleApp"
+
+configurations {
+   // exclude transitive groovy-all dep so local can be used
+    all*.exclude module: 'groovy-all'
+}
+
+
+dependencies {
+    //compile localGroovy()
+    compile 'org.codehaus.groovy:groovy-all:2.5.7'
+    compile 'ch.qos.logback:logback-classic:1.2.3'
+    //H2 DB
+    compile 'com.h2database:h2:1.4.199'
+   
+    testCompile 'org.spockframework:spock-core:1.2-groovy-2.4'
+    testCompile 'cglib:cglib:3.2.8'
+    testCompile 'org.objenesis:objenesis:3.0.1'
+}
+
+codenarc {
+    configFile file('config/codenarc/codenarc.groovy')
+    sourceSets = [sourceSets.main]
+
+    // TODO...
+    maxPriority1Violations = 99_999
+    maxPriority2Violations = 99_999
+    maxPriority3Violations = 99_999
+}
+
+// Following code is for Jenkins only - use task updateJenkinsItems to run
+pipelineConfig {
+    asi = 'VCS'
+    projectName = 'Groovy_Sample_App'
+    selectedJdk = 'Java SE JDK 8'
+    authorizedUsers = ['req88092', 'req85819', 'req91236', 'req88092']
+    nestedFolders = true
+    qualityLevel = 8
+
+    createPipeline {
+        initJob()
+        buildAndUnitTestJob()
+        staticCodeAnalysisJob()
+        genericGradleJob("create-tarball", "create a tar ball which includes a linux shell script to run the application", [gradleTasks: "distTar"])
+        publishContainerSnapshotJob()
+        // WARNING: Don't add Deploy jobs or it will run the batch job when deployed
+        if (System.env["GIT_BRANCH"] =~ /origin\/(release)|(master)|(develop)|(hotfix)/) {
+            promoteContainerReleaseCandidateJob()
+            promoteContainerReleaseJob()
+        }
+    }
+}
+
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact(distTar)
+        }
+    }
+}
+
+test {
+    println "WAS_ENV = ${System.getenv('WAS_ENV')}"
+    environment 'WAS_ENV', 'Unit'
+    beforeTest { descr ->
+        logger.warn("Starting Test ${descr.className} : ${descr.name}")
+    }
+}
