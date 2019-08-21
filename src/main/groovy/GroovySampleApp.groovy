@@ -28,7 +28,7 @@ class GroovySampleApp {
             writer.append("${row.NAME},${row.CATEGORY}\r\n")
         }
         writer.buffer.insert(0,'name,category\r\n')
-        def file = new FileOutputStream(new File('./test.csv'))
+        def file = new FileOutputStream(new File(config.file))
         file.write(writer.toString().bytes)
         sql.close()
     }
