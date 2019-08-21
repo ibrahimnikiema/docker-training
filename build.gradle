@@ -26,14 +26,8 @@ artifactoryPublish { skip = true }
 
 mainClassName = "GroovySampleApp"
 
-configurations {
-   // exclude transitive groovy-all dep so local can be used
-    all*.exclude module: 'groovy-all'
-}
-
 
 dependencies {
-    //compile localGroovy()
     compile 'org.codehaus.groovy:groovy-all:2.5.7'
     compile 'ch.qos.logback:logback-classic:1.2.3'
     //H2 DB
